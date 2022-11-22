@@ -1,0 +1,15 @@
+name: languages
+on:
+  workflow_dispatch:
+jobs:
+  update-readme:
+    name: Languages percentages
+    runs-on: ubuntu-latest
+    steps:
+    - uses: lowlighter/metrics@latest
+      with:
+        template: repository
+        filename: metrics.plugin.languages.svg
+        token: ${{ secrets.METRICS_TOKEN }}
+        base: ""
+        plugin_languages: yes
