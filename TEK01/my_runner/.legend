@@ -1,0 +1,5 @@
+Map formatting :
+There needs to have 2 lines
+A space is an empty space on the map
+0 to 8 are different types of obstacles;
+9 is the end portal, ! 1 max per map !

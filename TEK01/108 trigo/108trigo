@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+##
+## EPITECH PROJECT, 2021
+## B-MAT-200-STG-2-1-108trigo-matheo.vitali
+## File description:
+## 108trigo
+##
+
+import math
+from trigo_functions import *
+from sys import argv
+
+def information():
+    print("USAGE")
+    print("\t\t./108trigo fun a0 a1 a2 ...\n")
+    print("DESCRIPTION")
+    print('\tfun\tfunction to be applied, among at least "EXP",', end="")
+    print('"COS", "SIN", "COSH"\n\t\tand "SINH"')
+    print("\tai\tcoeficients of the matrix")
+
+def print_matrix(tab):
+    for i in range(len(tab)):
+        for j in range(len(tab[i])):
+            print("%.2f%c" % (tab[i][j], '\t' if (j != len(tab[i]) - 1) else '\n'), end='')
+
+def error_management():
+    i = len(argv) - 2
+    length = trunc(sqrt(i))
+    if int(sqrt(i)) * int(sqrt(i)) != i:
+        print("Wrong arguments")
+        exit(84)
+    return length
+
+def args_to_matrix():
+    tab = []
+    length = error_management()
+    for i in range(int(length)):
+        tab.append([])
+        for j in range(int(length)):
+            tab[i].append(int(argv[i * int(length) + j + 2]))
+    return (tab)
+
+def trigo():
+    if (len(argv) >= 2):
+        if (argv[1] == "-h"):
+            information()
+            exit (0)
+        tab = args_to_matrix()
+
+        if (argv[1] == "EXP"):
+            print_matrix(do_exp(tab))
+        elif (argv[1] == "COS"):
+            print_matrix(do_cos(tab))
+        elif (argv[1] == "SIN"):
+            print_matrix(do_sin(tab))
+        elif (argv[1] == "COSH"):
+            print_matrix(do_cosh(tab))
+        elif (argv[1] == "SINH"):
+            print_matrix(do_sinh(tab))
+        else:
+            print("Wrong arguments")
+            exit (84)
+
+    else:
+        print("Wrong arguments")
+        exit (84)
+
+def main():
+    try:
+        trigo()
+    except Exception as e:
+        print("Error")
+        exit (84)
+
+main()

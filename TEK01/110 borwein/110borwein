@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+##
+## EPITECH PROJECT, 2021
+## Visual Studio Live Share (Workspace)
+## File description:
+## 11Oborweill
+##
+
+from sys import argv
+from math import *
+import numpy as np
+
+num = 5000
+num2 = 10000
+deriv = num / num2
+
+def usage():
+    print("USAGE:\n" "    \t{} n\n\n" "DESCRIPTION\n" "    \tn    constant defining the integral to be computed".format(argv[0]))
+
+def error_handling():
+    try:
+        arg = int(argv[1])
+    except ValueError:
+        usage()
+        exit(84)
+    if (arg < 0):
+        usage()
+        exit(84)
+    return (arg)
+
+def calc(x, func):
+    if x == 0:
+        return 1
+    p = 1
+    for i in range(func + 1):
+        p = p * (sin(x / (2 * i + 1)) / (x / (2 * i + 1)))
+    return (p)
+
+def do_simpson(func):
+    res2 = 0
+    res = 0
+    for i in range(0, num2):
+        res2 += calc(i * deriv + deriv / 2, func)
+    res2 = res2 * 4
+    for i in range(1, num2):
+        res += calc(i * deriv, func)
+    res = res * 2
+    res = res2 + res
+    res = res + (calc(0, func) + calc(num, func))
+    res = res * (deriv / 6)
+    print("I%d = %.10f" % (func, res))
+    if (res - pi / 2 > -0.0000000001 and res - pi / 2 < 0):
+        print("diff = 0.0000000000")
+    else:
+        print("diff = %.10f" % abs(res - pi / 2))
+
+def do_trapez(func):
+    res = 0
+    for i in range(1, num2):
+        res += calc(i * deriv, func)
+    res = res * 2
+    res = res + (calc(0, func) + calc(num, func))
+    res = res * (deriv / 2)
+    print("I%d = %.10f" % (func, res))
+    if (res - pi / 2 > -0.0000000001 and res - pi / 2 < 0):
+        print("diff = 0.0000000000\n")
+    else:
+        print("diff = %.10f\n" % abs(res - pi / 2))
+
+def do_mid(func):
+    res = 0
+    j = 0.5
+    for i in np.arange(0.5, 5000.5, 0.5):
+        k = i - 0.5
+        res = res + calc((j + k) / 2, func)
+        j += 0.5
+    res = res * deriv
+    print("I%d = %.10f" % (func, res))
+    if (res - pi / 2 > -0.0000000001 and res - pi / 2 < 0):
+        print("diff = 0.0000000000\n")
+    else:
+        print("diff = %.10f\n" % abs(res - pi / 2))
+
+def check_help():
+    if (argv[1] == "-h"):
+        usage()
+        exit(0)
+    if len(argv) != 2:
+        exit(84)
+
+def borweill():
+    check_help()
+    arg = error_handling()
+    print("Midpoint:")
+    do_mid(arg)
+    print("Trapezoidal:")
+    do_trapez(arg)
+    print("Simpson:")
+    do_simpson(arg)
+
+def main():
+    try:
+        borweill()
+    except Exception as e:
+        print("Error")
+        exit(84)
+
+main()

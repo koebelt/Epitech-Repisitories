@@ -1,0 +1,64 @@
+#!/usr/bin/python3
+##
+## EPITECH PROJECT, 2021
+## B-MAT-200-STG-2-1-109titration-thomas.koebel
+## File description:
+## 109titration
+##
+
+import math
+import csv
+from calc import *
+from sys import argv
+
+def load_file():
+    info = []
+    try:
+        with open(argv[1]) as csv_file:
+            csv_data = list(csv.reader(csv_file, delimiter=';'))
+            try:
+                for i in range(len(csv_data)):
+                    info.append(csv_data[i])
+                    info[i][0] = float(csv_data[i][0])
+                    info[i][1] = float(csv_data[i][1])
+                    if not len(info[i]) == 2:
+                        raise IndexError
+            except (ValueError, IndexError):
+                print("%s : invalid file" % argv[1])
+                exit(84)
+    except (EnvironmentError) as err:
+        print(err)
+        exit(84)
+    if len(info) <= 4:
+        print("Not enough data in file")
+        exit(84)
+    return info
+
+def usage():
+    print("USAGE")
+    print("\t./109titration file\n")
+    print("DESCRIPTION")
+    print('\tfile\ta csv file containing “vol;ph” lines')
+
+def titration():
+    if (len(argv) == 2):
+        if (argv[1] == "-h"):
+            usage()
+            exit(0)
+        data = load_file()
+        derive = calc_derivative(data)
+        calc_second_derivative(derive, data)
+        calc_second_derivative_estimation(derive, data)
+    else:
+        print("Wrong arguments")
+        exit(84)
+
+def main():
+    try:
+        titration()
+    except Exception as e:
+        print("Error")
+        exit(84)
+
+
+main()
