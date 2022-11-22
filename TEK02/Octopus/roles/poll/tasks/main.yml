@@ -1,0 +1,50 @@
+- name: Stop apache2
+  become: yes
+  command: service apache2 stop
+
+- name: Copy local poll.tar to the VM
+  become: yes
+  copy:
+    src: poll.tar
+    dest: /root/poll.tar
+
+- name: Extract poll.tar
+  become: yes
+  unarchive:
+    src: /root/poll.tar
+    dest: /root
+    remote_src: yes
+
+- name: Install pip3
+  become: yes
+  apt:
+    name: python3-pip
+    update_cache: yes
+
+- name: Install Poll dependencies
+  become: yes
+  ignore_errors: yes
+  pip:
+    executable: pip3
+    requirements: /root/poll/requirements.txt
+    state: present
+
+- name: Copy poll.service to remote /etc/systemd/system/
+  become: yes
+  copy:
+    src: ../files/poll.service
+    dest: /etc/systemd/system/poll.service
+
+- name: Add environment variable to poll.service
+  become: yes
+  lineinfile:
+    path: /etc/systemd/system/poll.service
+    state: present
+    regexp: '^Environment=REDIS_HOST='
+    line: Environment="REDIS_HOST={{ REDIS_HOST }}"
+
+- name: Start poll service
+  become: yes
+  systemd:
+    name: poll
+    state: started

@@ -1,0 +1,6 @@
+*.out
+vgcore.*
+nanotekspice
+*.pdf
+*.nts
+.vscode

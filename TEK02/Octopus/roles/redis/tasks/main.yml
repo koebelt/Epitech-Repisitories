@@ -1,0 +1,18 @@
+- name: Redis installation
+  become: yes
+  apt:
+    name: redis-server
+    update-cache: yes
+
+- name: Copy redis.conf to remote /etc/redis/
+  become: yes
+  copy:
+    src: ../files/redis.conf
+    dest: /etc/redis/redis.conf
+
+- name: Restart Redis service
+  become: yes
+  service:
+    name: redis-server
+    state: restarted
+    enabled: yes

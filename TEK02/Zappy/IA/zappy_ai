@@ -1,0 +1,706 @@
+#!/usr/bin/env python3
+##
+## EPITECH PROJECT, 2022
+## zappy
+## File description:
+## zappy_ai
+##
+
+from sys import *
+from math import *
+from getopt import *
+import socket
+from time import *
+import os
+import select
+import random
+import subprocess
+
+childs = []
+
+tab_cmd = []
+
+findFood = False
+
+doOtherAction = False
+
+wasAnalysed = False
+
+hasIncanted = False
+
+hasMove = False
+
+lastBroadcast = ""
+
+var = { "inventory": "",
+        "look": "",
+        "level": 1,
+        "messageDir": "",
+        "message": "",
+        "nbIaOnMe": 0,
+        "lastLook":""
+    }
+
+## UTILS
+
+def getStr(nb):
+    try:
+        return str(nb)
+    except ValueError:
+        print("conversion to str failed")
+        exit (84)
+
+def getInt(nb):
+    try:
+        return int(nb)
+    except ValueError:
+        print("conversion to int failed")
+        exit (84)
+
+def usage():
+    print("USAGE: ./zappy_ai -p port -n name -h machine")
+    print("\tport\tis the port number")
+    print("\tname\tis the name of the team")
+    print("\tmachine\tis the name of the machine; localhost by default")
+
+def error_handling():
+    if len(argv) != 5 and len(argv) != 7:
+        print("You need to read -help.")
+        exit(84)
+    if len(argv) == 5:
+        opts, av = getopt(argv[1:], 'p:n:')
+    else:
+        opts, av = getopt(argv[1:], 'p:n:h:')
+    h_exist = False
+    for k, v in opts:
+        if k == "-p":
+            port = getInt(v)
+        if k == "-n":
+            team_name = getStr(v)
+        if k == "-h":
+            machine = getStr(v)
+            h_exist = True
+    if h_exist == False:
+        machine = 'localhost'
+    if port < 1024 or port > 65536:
+        print("Bad port")
+        exit(84)
+    return port, team_name, machine
+
+def my_recv(s):
+    data = ''
+    while not '\n' in data:
+        receved = s.recv(2048).decode("utf-8")
+        if receved == "":
+            print("Server disconnected")
+            exit(0)
+        data += receved
+    return data
+
+def my_send(s, msg):
+    to_send = msg.encode('ascii')
+    try:
+        s.send(to_send)
+        sleep(0.2)
+    except Exception as e:
+        print("error dans le send:", e)
+
+## FIN UTILS
+
+## SOCKET
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER and Tristan COURTY
+#
+# @brief Function select_data: This function is used for receive a message with select
+# @param s: the socket
+#
+# @return Nothing
+#
+def select_data(s):
+    global tab_cmd
+    global messageSent
+    message = ""
+    rlist, wlist, xlist = select.select([s], [s], [], 0.05)
+    if rlist:
+        message = my_recv(s)
+    if wlist:
+        if tab_cmd:
+            my_send(s, tab_cmd[0])
+            messageSent = tab_cmd[0]
+            tab_cmd.pop(0)
+    if message == "":
+        return []
+    return message.split("\n")
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER and Tristan COURTY
+#
+# @brief Function send_message: This function is used for send a message to the server
+# @param s: the socket
+# @param to_send: string we want to send to the server
+# @param to_append: string we want to and to the tab of command
+#
+# @return Nothing
+#
+def send_message(to_append):
+    global tab_cmd
+    global doOtherAction
+    global hasMove
+
+    if to_append != "Inventory\n" and to_append != "Look\n":
+        doOtherAction = True
+    if to_append == "Forward\n":
+        hasMove = True
+    if to_append not in tab_cmd:
+        tab_cmd.append(to_append)
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER and Tristan COURTY
+#
+# @brief Function do_child: This function is used for fork the IA
+# @param s: the socket
+# @param port: the port
+# @param host: the host
+# @param team_name: the IA team name
+#
+# @return Nothing
+#
+def do_child(s, port, host, team_name):
+    global var
+    global tab_cmd
+    global childs
+
+    pid = os.fork()
+    if pid <= 0:
+        filename = "test " + getStr(random.randint(0, 10))
+        FTEST = open(filename, "w+")
+        childs.append(subprocess.Popen("./zappy_ai " + " -p " + getStr(port) + " -h " + getStr(host) + " -n " + team_name, stdout=FTEST, shell=True))
+        exit()
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function create_all_players: This function is used to create all fork needed
+# @param s: the socket
+# @param port: the port
+# @param host: the hostname or host ip
+# @param team_name: the team name
+# @param connect_nbr: nbr of childs to create
+#
+# @return Nothing
+#
+def create_all_players(s, port, host, team_name, connect_nbr):
+    connect_nbr_cpy = getInt(connect_nbr)
+    if connect_nbr_cpy > 0:
+        do_child(s, port, host, team_name)
+
+## FIN SOCKET
+
+## MOVE
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function go_diago_left: This function is called when the IA need to go to the extrem left of the Look vision
+# @param s: socket
+#
+# @return Nothing
+#
+def go_diago_left():
+    send_message("Forward\n")
+    send_message("Left\n")
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function go_diago_right: This function is called when the IA need to go to the extrem right of the Look vision
+# @param s: socket
+#
+# @return Nothing
+#
+def go_diago_right():
+    send_message("Forward\n")
+    send_message("Right\n")
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function doMove: This function do an action depending of the case index where the IA need to go
+# @param case_index: index of the case where the IA need to go
+# @param s: socket
+#
+# @return Nothing
+#
+def doMove(case_index):
+    left = [1, 4, 9, 16, 25, 36, 49, 64]
+    right = [3, 8, 15, 24, 35, 48, 63, 80]
+
+    if case_index in left:
+        go_diago_left()
+    elif case_index in right:
+        go_diago_right()
+    else:
+        send_message("Forward\n")
+
+## FIN MOVE
+
+## ANALYSE
+
+#
+# @author Tristan COURTY and Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function look: This function check if a ressource forward trantorians is needed and if it's the case return case's index
+# @param inventory: inventory of the IA
+# @param ressourcesForward: ressources forward present in the IA's vision
+# @param level: IA's level
+#
+# @return case with needed ressource index
+#
+def look(inventory, ressourcesForward, level):
+    inventory = inventory[1:-1]
+    ressourcesForward = ressourcesForward[1:-1]
+    ressourcesForward = ressourcesForward.split(',')
+    for i in range (len(ressourcesForward)):
+        ressourcesForward[i] = ressourcesForward[i].split(' ')
+    for i in range (len(ressourcesForward)):
+        if "" in ressourcesForward[i]:
+            ressourcesForward[i].remove("")
+    inventory = inventory.split(',')
+    for i in range (len(inventory)):
+        inventory[i] = inventory[i].split(' ')
+    for i in range (len(inventory)):
+        if "" in inventory[i]:
+            inventory[i].remove("")
+    for i in range (len(ressourcesForward)):
+        for j in range (len(ressourcesForward[i])):
+            if (not ressourcesForward[i][j]):
+                continue
+            if (need_stone(inventory, ressourcesForward[i][j], level)) == True:
+                return i
+    return 2
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function look_food: This function is used to see on which case of the Look there is food
+# @param ressourcesForward: result of the look command
+#
+# @return index of the case
+#
+def look_food(ressourcesForward):
+    for i in range (len(ressourcesForward)):
+        if "food" in ressourcesForward[i]:
+            return i
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function need_take_stone: this function is used to see which stone we need to take on the actual case of the player
+# @param inventory: inventory of the player
+# @param ressourcesForward: look of the player
+# @param level: level of the player
+#
+# @return needed_stone on the actual case
+#
+def need_take_stone(inventory, ressourcesForward, level):
+    inventory = inventory[1:-1]
+    ressourcesForward = ressourcesForward[1:-1]
+    ressourcesForward = ressourcesForward.split(',')
+    for i in range (len(ressourcesForward)):
+        ressourcesForward[i] = ressourcesForward[i].split(' ')
+    for i in range (len(ressourcesForward)):
+        if "" in ressourcesForward[i]:
+            ressourcesForward[i].remove("")
+    inventory = inventory.split(',')
+    for i in range (len(inventory)):
+        inventory[i] = inventory[i].split(' ')
+    for i in range (len(inventory)):
+        if "" in inventory[i]:
+            inventory[i].remove("")
+    for needed_stone in ressourcesForward[0]:
+        if (need_stone(inventory, needed_stone, level)) == True:
+            return needed_stone
+    return ""
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function need_stone: This function check if we need the stone we see or not
+# @param inventory: inventory of the IA
+# @param stone_needed: stone present in the case of the vision
+# @param level: level of the IA
+#
+# @return True if the IA need the stone, False if not
+#
+def need_stone(inventory, stone_needed, level):
+    up_to_two = "linemate"
+    up_two_nb = 1
+    up_to_three = ["linemate", "deraumere", "sibur"]
+    up_three_nb = [1, 1, 1]
+    up_to_four = ["linemate", "sibur", "phiras"]
+    up_four_nb = [2, 1, 2]
+    up_to_five = ["linemate", "deraumere", "sibur", "phiras"]
+    up_five_nb = [1, 1, 2, 1]
+    up_to_six = ["linemate", "deraumere", "sibur", "mendiane"]
+    up_six_nb = [1, 2, 1, 3]
+    up_to_seven = ["linemate", "deraumere", "sibur", "phiras"]
+    up_seven_nb = [1, 2, 3, 1]
+    up_to_eight = ["linemate", "deraumere", "sibur", "mendiane", "phiras", "thystane"]
+    up_eight_nb = [2, 2, 2, 2, 2, 1]
+    up_names = [up_to_three, up_to_four, up_to_five, up_to_six, up_to_seven, up_to_eight]
+    up_numbers = [up_three_nb, up_four_nb, up_five_nb, up_six_nb, up_seven_nb, up_eight_nb]
+
+    if level == 1:
+        for tab_case in inventory:
+            stone_inventory = tab_case[0]
+            nb_inventory = getInt(tab_case[1])
+            if (up_to_two == stone_inventory) and (nb_inventory < up_two_nb) and (stone_needed == up_to_two):
+                return True
+    if level >= 2:
+        for tab_case in inventory:
+            stone_inventory = tab_case[0]
+            nb_inventory = getInt(tab_case[1])
+            for stone, nb in zip(up_names[level - 2], up_numbers[level - 2]):
+                if (stone == stone_inventory) and (nb_inventory < nb) and (stone_needed == stone):
+                    return True
+    return False
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function need_call_ia: This function check if we need to call other ia for elevation
+# @param inventory: inventory of the IA
+# @param level: level of the IA
+#
+# @return True if the IA need to call, False if not
+#
+def need_call_others(inventory, level):
+    up_to_two = "linemate"
+    up_two_nb = 1
+    up_to_three = ["linemate", "deraumere", "sibur"]
+    up_three_nb = [1, 1, 1]
+    up_to_four = ["linemate", "sibur", "phiras"]
+    up_four_nb = [2, 1, 2]
+    up_to_five = ["linemate", "deraumere", "sibur", "phiras"]
+    up_five_nb = [1, 1, 2, 1]
+    up_to_six = ["linemate", "deraumere", "sibur", "mendiane"]
+    up_six_nb = [1, 2, 1, 3]
+    up_to_seven = ["linemate", "deraumere", "sibur", "phiras"]
+    up_seven_nb = [1, 2, 3, 1]
+    up_to_eight = ["linemate", "deraumere", "sibur", "mendiane", "phiras", "thystane"]
+    up_eight_nb = [2, 2, 2, 2, 2, 1]
+    up_names = [up_to_three, up_to_four, up_to_five, up_to_six, up_to_seven, up_to_eight]
+    up_numbers = [up_three_nb, up_four_nb, up_five_nb, up_six_nb, up_seven_nb, up_eight_nb]
+    cmpt = 0
+    inventory = inventory[1:-1]
+    inventory = inventory.split(',')
+    for i in range (len(inventory)):
+        inventory[i] = inventory[i].split(' ')
+    for i in range (len(inventory)):
+        if "" in inventory[i]:
+            inventory[i].remove("")
+    if level == 1:
+        for tab_case in inventory:
+            stone_inventory = tab_case[0]
+            nb_inventory = getInt(tab_case[1])
+            if (up_to_two == stone_inventory) and (nb_inventory >= up_two_nb):
+               return True
+    if level >= 2:
+        for tab_case in inventory:
+            stone_inventory = tab_case[0]
+            nb_inventory = getInt(tab_case[1])
+            for stone, nb in zip(up_names[level - 2], up_numbers[level - 2]):
+                if (stone == stone_inventory) and (nb_inventory >= nb):
+                    cmpt += 1
+        if cmpt == len(up_names[level - 2]):
+            return True
+    return False
+
+#
+# @author Mathieu SUK
+#
+# @brief Function analyse_broadcast: This function is used for check the direction of the broadcast message
+# @param msg: the message that the server send
+# @param s: the socket
+#
+# @return Nothing
+#
+def analyse_broadcast():
+    global var
+    global lastBroadcast
+    global findFood
+    if var["message"] != "":
+        need_to_walk = False
+        msg = var["message"]
+    elif var["messageDir"] != "":
+        need_to_walk = True
+        msg = var["messageDir"]
+    msg = msg.split(",")
+    msg[1] = msg[1][1:]
+    direction = getInt(msg[0].split(" ")[1])
+    if need_to_walk == True:
+        if direction == 0:
+            if var["level"] == getInt(msg[1]) and need_call_others(var["inventory"], getInt(var["level"])):
+                lastBroadcast = "Broadcast jsuisokpourlvlup\n"
+                send_message("Broadcast jsuisokpourlvlup\n")
+        elif var["level"] == getInt(msg[1]) and need_call_others(var["inventory"], getInt(var["level"])) and findFood == False:
+            if direction == 1:
+                doMove(2)
+            elif direction >= 2 and direction <= 5:
+                doMove(1)
+            else:
+                doMove(3)
+        else:
+            needed_stone = need_take_stone(var["inventory"], var["look"], var["level"])
+            if needed_stone != "":
+                send_message("Take " + needed_stone + "\n")
+            elif findFood != True:
+                doMove(look(var["inventory"], var["look"], var["level"]))
+    else:
+        if direction == 0:
+            if "jsuisenhautetjepars" in msg[1]:
+                var["nbIaOnMe"] = var["nbIaOnMe"] - 1
+            if "jsuisenbasetjepars" in msg[1]:
+                var["nbIaOnMe"] = 0
+            if "jsuisokpourlvlup" in msg[1]:
+                var["nbIaOnMe"] = var["nbIaOnMe"] + 1
+
+def findCmdType(message):
+    if message[:6] == "[ food":
+        return "inventory"
+    if message[:6] == "[ play":
+        return "look"
+    # if message[:5] == "[food":
+    #     return "inventory"
+    # if message[:5] == "[play":
+    #     return "look"
+    return None
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function get_food: This function is used for know where is the food and if we can take it
+# @param look: IA's vision
+# @param s: the socket
+#
+# @return Nothing
+#
+def get_food(look):
+    look = look[1:-1].split(",")
+    if "food" in look[0]:
+        return "Take food\n"
+    else:
+        foodTile = look_food(look)
+        if foodTile == None:
+            randomValue = random.randint(1, 3)
+            return getStr(randomValue)
+        return getStr(foodTile)
+
+def getNbIaNeeded(level):
+    nbIaNeeded = [1, 2, 2, 4, 4, 6, 6]
+    return (nbIaNeeded[level - 1])
+
+def appendInTab(tab, to_append):
+    for cmd in tab_cmd:
+        if to_append in cmd:
+            tab.append(cmd)
+    return tab
+
+def setItem():
+    global var
+    up_to_three = ["linemate", "deraumere", "sibur"]
+    up_three_nb = [1, 1, 1]
+    up_to_four = ["linemate", "sibur", "phiras"]
+    up_four_nb = [2, 1, 2]
+    up_to_five = ["linemate", "deraumere", "sibur", "phiras"]
+    up_five_nb = [1, 1, 2, 1]
+    up_to_six = ["linemate", "deraumere", "sibur", "mendiane"]
+    up_six_nb = [1, 2, 1, 3]
+    up_to_seven = ["linemate", "deraumere", "sibur", "phiras"]
+    up_seven_nb = [1, 2, 3, 1]
+    up_to_eight = ["linemate", "deraumere", "sibur", "mendiane", "phiras", "thystane"]
+    up_eight_nb = [2, 2, 2, 2, 2, 1]
+    up_names = [up_to_three, up_to_four, up_to_five, up_to_six, up_to_seven, up_to_eight]
+    up_numbers = [up_three_nb, up_four_nb, up_five_nb, up_six_nb, up_seven_nb, up_eight_nb]
+    i = 0
+    if var["level"] == 1:
+        if "linemate" not in var["look"][1:-1].split(",")[0]:
+            send_message("Set linemate\n")
+    else:
+        for cmpt in up_numbers[var["level"] - 2]:
+            nb = var["look"][1:-1].split(",")[0].count(up_names[var["level"] - 2][i])
+            while cmpt > nb:
+                send_message("Set " + up_names[var["level"] - 2][i] + "\n")
+                cmpt = cmpt - 1
+            i = i + 1
+
+def takeAllItem(case):
+    if case == "player":
+        return True
+    if "linemate" in case:
+        send_message("Take linemate\n")
+    if "deraumere" in case:
+        send_message("Take deraumere\n")
+    if "sibur" in case:
+        send_message("Take sibur\n")
+    if "mendiane" in case:
+        send_message("Take mendiane\n")
+    if "phiras" in case:
+        send_message("Take phiras\n")
+    if "thystame" in case:
+        send_message("Take thystame\n")
+    return False
+
+#
+# @author Mathieu SUK
+#
+# @brief Function checkNbIa: This function check if we have the good number of ia in the same tile for evole
+#
+# @return True if yes, False is Not
+#
+def checkNbIa():
+    global var
+    nbPlayerOnMe= var["look"][1:-1].split(",")[0].count("player")
+    nbIaNeeded = [2, 2, 4, 4, 6, 6]
+
+    if var["nbIaOnMe"] == nbPlayerOnMe and nbPlayerOnMe == nbIaNeeded[var["level"] - 2]:
+        return True
+    return False
+
+## FIN ANALYSE
+
+#
+# @author Mathieu SUK and Thibaut RUSCHER
+#
+# @brief Function connect_to_server: This function is used for connect to the C server
+# @param port: the port
+# @param host: the host
+#
+# @return Nothing
+#
+def connect_to_server(port, host, team_name):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    connectionSuccessful = False
+    while not connectionSuccessful:
+        try:
+            s.connect((host, port))
+            connectionSuccessful = True
+        except:
+            pass
+    print(my_recv(s))
+    s.send(team_name.encode('ascii'))
+    sleep(0.2)
+    init = my_recv(s).split('\n')
+    init = init[:-1]
+    create_all_players(s, port, host, team_name, init[0])
+    global tab_cmd
+    global var
+    global doOtherAction
+    global findFood
+    global wasAnalysed
+    global lastBroadcast
+    global hasMove
+    global hasIncanted
+    copylook = ""
+    while 1:
+        if tab_cmd == [] and var["look"] == "" and var["inventory"] == "" and hasIncanted == False:
+            send_message("Look\n")
+            send_message("Inventory\n")
+        msg = select_data(s)
+        if len(msg) != 0:
+            if "" in msg:
+                msg.remove("")
+        while msg != []:
+            if "Current level" in msg[0]:
+                hasIncanted = False
+                var["level"] = var["level"] + 1
+                var["look"] = ""
+                var["inventory"] = ""
+            if "message" in msg[0] and msg[0].split(",")[1][1:-1].isnumeric():
+                var["messageDir"] = msg[0]
+                var["message"] = ""
+            elif "message" in msg[0] and msg[0].split(",")[1][1:-1].isnumeric() == False:
+                var["message"] = msg[0]
+                var["messageDir"] = ""
+            if findCmdType(msg[0]) == "inventory":
+                var["inventory"] = msg[0]
+            elif findCmdType(msg[0]) == "look":
+                if copylook == msg[0]:
+                    send_message("Look\n")
+                    sleep(0.2)
+                else:
+                    var["look"] = msg[0]
+                    copylook = ""
+                copylook = ""
+            msg = msg[1:]
+        while var["inventory"] != "" and var["look"] != "" and tab_cmd == [] and hasIncanted == False:
+            tileZero = var["look"][1:-1].split(",")[0]
+            foodLevel = getInt(var["inventory"].split(" ")[2][:-1])
+            if foodLevel >= 25:
+                findFood = False
+            if foodLevel <= 15:
+                if "message 0, jsuisokpourlvlup" in lastBroadcast and var["nbIaOnMe"] != 0:
+                    send_message("Broadcast jsuisenhautetjepars\n")
+                if lastBroadcast != "":
+                    if lastBroadcast.split(" ")[1][:-1].isnumeric() and var["nbIaOnMe"] != 0:
+                        send_message("Broadcast jsuisenbasetjepars\n")
+                findFood = True
+            if findFood == True:
+                toDo = get_food(var["look"])
+                if "Take food" in toDo:
+                    send_message("Take food\n")
+                else:
+                    doMove(getInt(toDo))
+            elif "food" in tileZero:
+                send_message("Take food\n")
+            # if var["level"] != 1 and var["messageDir"] != "" or var["message"] != "":
+            #     analyse_broadcast()
+            #     wasAnalysed = True
+            # else:
+            needed_stone = need_take_stone(var["inventory"], var["look"], var["level"])
+            if needed_stone != "":
+                send_message("Take " + needed_stone + "\n")
+            elif var["level"] == 1:
+                if need_call_others(var["inventory"], var["level"]) == True and findFood != True:
+                    if takeAllItem(var["look"][2:-1].split(",")[0]) == True:
+                        setItem()
+                        send_message("Incantation\n")
+                        hasIncanted = True
+                elif findFood != True:
+                    doMove(look(var["inventory"], var["look"], var["level"]))
+            elif var["level"] != 1:
+                if checkNbIa() == True and need_call_others(var["inventory"], var["level"]) == True:
+                    if takeAllItem(var["look"][2:-1].split(",")[0]) == True:
+                        setItem()
+                        send_message("Incantation\n")
+                        hasIncanted = True
+                elif need_call_others(var["inventory"], var["level"]) == True:
+                    lastBroadcast = "Broadcast " + getStr(var["level"]) + "\n"
+                    send_message("Broadcast " + getStr(var["level"]) + "\n")
+                elif findFood != True:
+                    doMove(look(var["inventory"], var["look"], var["level"]))
+        if var["look"] != "" and var["inventory"] != "" and doOtherAction == True:
+            doOtherAction = False
+            if hasMove == True:
+                copylook = var["look"]
+            else:
+                copylook = ""
+            var["look"] = ""
+            var["inventory"] = ""
+        if var["message"] != "" and wasAnalysed == True:
+            var["message"] = ""
+
+def zappy_ai():
+    if len(argv) == 2 and argv[1] == "-help":
+        usage()
+        exit (0)
+    port, team_name, machine = error_handling()
+    team_name = team_name + "\n"
+    connect_to_server(port, machine, team_name)
+
+if __name__ == "__main__":
+    try:
+        zappy_ai()
+    except Exception as e:
+        exit (84)

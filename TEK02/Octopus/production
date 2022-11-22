@@ -1,0 +1,14 @@
+[redis_service]
+redis ansible_host="{{ REDIS_HOST }}" ansible_connection=ssh ansible_user="{{REDIS_USERNAME}}" ansible_password="{{REDIS_PASSWD}}" ansible_sudo_pass="{{REDIS_PASSWD}}"
+
+[poll_service]
+poll ansible_host="{{ POLL_HOST }}" ansible_connection=ssh ansible_user="{{POLL_USERNAME}}" ansible_password="{{POLL_PASSWD}}" ansible_sudo_pass="{{POLL_PASSWD}}"
+
+[result_service]
+result ansible_host="{{ RESULT_HOST }}" ansible_connection=ssh ansible_user="{{RESULT_USERNAME}}" ansible_password="{{RESULT_PASSWD}}" ansible_sudo_pass="{{RESULT_PASSWD}}"
+
+[postgresql_service]
+postgresql ansible_host="{{ POSTGRESQL_HOST }}" ansible_connection=ssh ansible_user="{{POSTGRESQL_USERNAME}}" ansible_password="{{POSTGRESQL_PASSWD}}" ansible_sudo_pass="{{POSTGRESQL_PASSWD}}" ansible_python_interpreter="{{ PYTHON_INTERPRETER }}"
+
+[worker_service]
+worker ansible_host="{{ WORKER_HOST }}" ansible_connection=ssh ansible_user="{{WORKER_USERNAME}}" ansible_password="{{WORKER_PASSWD}}" ansible_sudo_pass="{{WORKER_PASSWD}}"

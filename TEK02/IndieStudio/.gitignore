@@ -1,0 +1,5 @@
+.vscode/
+build
+src/game/algorithms/botIA
+tests/
+bomberman

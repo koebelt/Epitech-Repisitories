@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+import sys
+import math
+
+def USAGE():
+    print("USAGE")
+    print("\t./ducks a\n")
+    print("DESCRIPTION")
+    print("\ta\tconstant\n")
+
+def get_proba_func(a, t):
+    return a * math.exp(-t) + (4 - 3 * a) * math.exp(-2 * t) + (2 * a - 4) * math.exp(-4 * t)
+
+def get_proba_derived(a, t):
+    return -a * math.exp(-t) - (4 - 3 * a) / 2 * math.exp(-2 * t) - (2 * a - 4) / 4 * math.exp(-4 * t)
+
+def average_time(a):
+    result = 0.0
+    t = 0.0
+    while t < 10:
+        result += get_proba_func(a, t) * t / 1000
+        t += 0.001
+    return result
+
+def deviation(a, time):
+    result = 0.0
+    t = 0.0
+    while t < 100:
+        result += pow(t - time, 2) * get_proba_func(a, t) / 1000
+        t += 0.001
+    result = math.sqrt(result)
+    return result
+
+def come_back(a, percent):
+    t = 0.0
+    while t < 1000:
+        if get_proba_derived(a, t / 60) - get_proba_derived(a, 0) >= percent:
+            return t
+        t += 0.002
+
+def minutes(time):
+    return int(time)
+
+def seconds(time):
+    return (time - int(time)) * 60
+
+def ducks(a):
+    comeBackFifty = come_back(a, 0.5)
+    comeBackNinetynine = come_back(a, 0.99)
+    duckOneMinute = (get_proba_derived(a, 1) - get_proba_derived(a, 0)) * 100
+    duckTwoMinute = (get_proba_derived(a, 2) - get_proba_derived(a, 0)) * 100
+    if (math.ceil(seconds(average_time(a))) * 10 < 100):
+        print("Average return time: " + str(minutes(average_time(a))) + "m 0" + str(math.ceil(seconds(average_time(a)))) + "s")
+    else:
+        print("Average return time: " + str(minutes(average_time(a))) + "m " + str(math.ceil(seconds(average_time(a)))) + "s")
+    print("Standard deviation: %.3f" % deviation(a, average_time(a)))
+    if (math.ceil(seconds(comeBackFifty / 60)) * 10 < 100):
+        print("Time after which 50% of the ducks are back: " + str(minutes(comeBackFifty / 60)) + "m 0" + str(round(seconds(comeBackFifty / 60))) + "s")
+    else:
+        print("Time after which 50% of the ducks are back: " + str(minutes(comeBackFifty / 60)) + "m " + str(round(seconds(comeBackFifty / 60))) + "s")
+    if (math.ceil(seconds(comeBackNinetynine / 60)) * 10 < 100):
+        print("Time after which 99% of the ducks are back: " + str(minutes(comeBackNinetynine / 60)) + "m 0" + str(round(seconds(comeBackNinetynine / 60))) + "s")
+    else:
+        print("Time after which 99% of the ducks are back: " + str(minutes(comeBackNinetynine / 60)) + "m " + str(round(seconds(comeBackNinetynine / 60))) + "s")
+    print("Percentage of ducks back after 1 minute: %.1f%%" % duckOneMinute)
+    print("Percentage of ducks back after 2 minutes: %.1f%%" % duckTwoMinute)
+
+try:
+    if len(sys.argv) == 2:
+        if sys.argv[1] == "-h":
+            USAGE()
+            exit(0)
+        if float(sys.argv[1]) < 0:
+            raise Exception("a must be between 0 and 2.5\n")
+        if float(sys.argv[1]) > 2.5:
+            raise Exception("a must be between 0 and 2.5\n")
+        else:
+            ducks(float(sys.argv[1]))
+    else:
+        raise Exception("Invalid argument\n")
+except Exception as error:
+    sys.stdout.write(str(error))
+    exit(84)

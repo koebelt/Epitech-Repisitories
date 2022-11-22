@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import sys, math, time
+from sys import stdin
+from math import factorial, sqrt, exp, floor, pi
+
+def print_help():
+    print("USAGE")
+    print("\t./205IQ u s [IQ1] [IQ2]\n")
+    print("DESCRIPTION")
+    print("\tu mean")
+    print("\ts standard deviation")
+    print("\tIQ1 minimum IQ")
+    print("\tIQ2 maximum IQ")
+
+def IQ():
+    if (len(sys.argv) == 3) :
+        x = 0
+        while (x <= 200) :
+            res = (1 / (float(sys.argv[2]) * sqrt(2 * pi))) * exp(-0.5 * pow((float(sys.argv[1]) - float(x)) / float(sys.argv[2]), 2))
+            print(x, format(round(res, 5), ".5f"))
+            x += 1;
+    elif (len(sys.argv) == 4) :
+        x = 0
+        res = 0
+        while (x < int(sys.argv[len(sys.argv) - 1])) :
+            res += (1 / (float(sys.argv[2]) * sqrt(2 * pi))) * exp(-0.5 * pow((float(x) - float(sys.argv[1])) / float(sys.argv[2]), 2))
+            x += 0.01
+        print(format(res, ".1f"), "% of people have an IQ inferior to ", sys.argv[3], sep="")
+    else :
+        x = int(sys.argv[3])
+        res = 0
+        while (x < int(sys.argv[len(sys.argv) - 1])) :
+            res += (1 / (float(sys.argv[2]) * sqrt(2 * pi))) * exp(-0.5 * pow((float(x) - float(sys.argv[1])) / float(sys.argv[2]), 2))
+            x += 0.01
+        print(format(res, ".1f"), "% of people have an IQ between ", sys.argv[3]," and ", sys.argv[4], sep="")
+    return 0
+
+try :
+    if (len(sys.argv) == 2) :
+        if (sys.argv[1] == '-h') :
+            print_help()
+        exit(84)
+    elif (len(sys.argv) == 3) :
+        IQ()
+    elif (len(sys.argv) == 4) :
+        if (int(sys.argv[3]) < 0 or int(sys.argv[3]) > 200) :
+            exit(84)
+        IQ()
+    elif (len(sys.argv) == 5) :
+        if (int(sys.argv[3]) < 0 or int(sys.argv[3]) > 200 or int(sys.argv[4]) < 0 or int(sys.argv[4]) > 200 or int(sys.argv[3]) >= int(sys.argv[4])) :
+            exit(84)
+        IQ()
+    else :
+        exit(84)
+except :
+    exit(84)

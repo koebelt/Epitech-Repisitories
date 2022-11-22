@@ -1,0 +1,47 @@
+- name: Stop apache2
+  become: yes
+  command: service apache2 stop
+
+- name: Install node & npm
+  become: yes
+  apt:
+    name: ["nodejs","npm"]
+    update_cache: yes
+
+- name: Copy local result.tar to the VM
+  become: yes
+  copy:
+    src: result.tar
+    dest: /root/result.tar
+
+- name: Extract result.tar
+  become: yes
+  unarchive:
+    src: /root/result.tar
+    dest: /root
+    remote_src: yes
+
+- name: Install packages present in package.json
+  become: yes
+  npm:
+    path: /root/result
+
+- name: Copy result.service to remote /etc/systemd/system/
+  become: yes
+  copy:
+    src: ../files/result.service
+    dest: /etc/systemd/system/result.service
+
+- name: Add environment variable to result.service
+  become: yes
+  lineinfile:
+    path: /etc/systemd/system/result.service
+    state: present
+    regexp: '^Environment='
+    line: Environment="PORT={{ PORT }}" "POSTGRESQL_HOST={{ POSTGRESQL_HOST }}" "POSTGRESQL_PORT={{ POSTGRESQL_PORT }}" "POSTGRESQL_USER={{ POSTGRESQL_DB_USER }}" "POSTGRESQL_PASSWORD={{ POSTGRESQL_DB_PASSWD }}" "POSTGRESQL_DB={{ POSTGRESQL_DB }}"
+
+- name: Start result service
+  become: yes
+  systemd:
+    name: result
+    state: started

@@ -1,0 +1,14 @@
+- name: Install required dependencies
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - dirmngr
+    - software-properties-common
+    - gnupg
+    - gnupg2
+    - wget
