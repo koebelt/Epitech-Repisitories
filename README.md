@@ -2,7 +2,6 @@
 
 Hi! I'm Thomas KOEBEL and studies at **EPITECH** Strasbourg. I think it's kind of a shame that all the project done in school doesn't count in my Github stats, that's why this repository exists ! Obviously the code available here doesn't represent my code level nowadays. If I could re code all of this, I would obviously done everything differently.
 
-![Metrics](/metrics.plugin.languages.svg)
 
 ## Tek 01 Projects
 
